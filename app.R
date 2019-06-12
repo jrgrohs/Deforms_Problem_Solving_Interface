@@ -4,8 +4,7 @@
 #
 
 # Libraries ----
-# source("https://install-github.me/zzawadz/dragulaR")
-
+# source("https://install-github.me/zzawadz/dragulaR")  -  drag and drop library
 library(shiny)
 library(tidyverse)
 library(shinyWidgets)
@@ -13,27 +12,32 @@ library(png)
 library(dragulaR)
 
 
-# Define Variables 
+# Define Formulas
+# Used for drag and drop equations
+# TODO: Get the math to display properly
+#   played around with Mathjax https://github.com/mathjax/mathjax
+equation_1 <- c("delta=delta_T * l * $(\\alpha$)","$(\\beta$)")
+equation_2 <- c("equation 2")
+equation_3 <- c("equation 3")
+physics_equations_df <- data.frame(equation_1, 
+                                   equation_2,
+                                   equation_3)
 
+# Define Variables 
 var_list <- c("Unknown","50 mm","50 mm","1 mm","70 GPa","23 x 10-6 oC-1","100 oC")
 source("deforms_formulas.R")
 
 
-# Define Formulas
-
-formulas <- c("delta=delta_T * l * $(\\alpha$)","$(\\beta$)","eq2","eq3")
-
-
 # Define makeElement
-
+# creates the div containers for the drag and drop
 makeElement <- function(data, name)
 {
   div(style = "border-width:2px;border-style:solid;",
       drag = name,
-      div(class = "active title", name),
-      div(class = "active content", p(sprintf("Class: %s", class(data[[name]])))))
+      div(class = "active content", p(sprintf("%s", data[[name]]))))
+      # math(data[[name]])
+      # div(class = "active content", p(sprintf("Class: %s", class(data[[name]])))))
 }
-
 
 
 # Define UI
@@ -52,13 +56,25 @@ ui <- fluidPage(
         circle = FALSE, status = "primary", 
         label = pluck(temp_change_formula, formula),
         icon = icon("calculator"), width = "300px",
-        tooltip = tooltipOptions(title = "Click to select your equations!")), 
+        tooltip = tooltipOptions(title = "Click to select your equations!")
+        ), 
       
       column(12,
              h3("Drag from here:"),
-             div(id = "Available", style = "min-height: 600px;",
-                 lapply(colnames(mtcars), makeElement, data = mtcars))
-      ),
+             div(id = "Available", style = "min-height: 250px;",
+                 lapply(colnames(physics_equations_df), makeElement, data = physics_equations_df))
+             
+             # TODO: Fix Persistance in Drag and Drop elements
+             #    Should have to do with setting the copy variable true, 
+             #    but that documentation is only for html
+             #    https://sindu12jun.github.io/dragula/
+             # ,
+                 # lapply(colnames(mtcars), makeElement, data = mtcars)
+             # dragula([document.getElementById("Available")),
+             # document.getElementById("Available")],{
+             #   copy:true
+             # }
+        ),
       dragulaOutput("dragula"),
       
       hr(),
