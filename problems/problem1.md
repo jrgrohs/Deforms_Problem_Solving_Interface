@@ -10,6 +10,8 @@ A solid square bar of cross-sectional dimensions  50mm x 50 mm is attached rigid
 ![rigid bar attached to wall A, with a small gap between right edge of bar and wall B](deforms_figure.png)
 
 Knowing the bar is made of aluminum $E = 70 GPa$, $\alpha = 23 * 10^{-6}$ :
-    a.  At what temperature does the gap close? 
-    b.  What stress exists in the bar at a temperature of $100^\\circ C$?'
+
+1.  At what temperature does the gap close? 
+2.  What stress exists in the bar at a temperature of $100^\\circ C$?'
+    
     
