@@ -114,24 +114,6 @@ server <- function(input, output) {
       lapply(frontMatter$equations, makeElement))
   })
 
-  output$testing = renderUI({
-    withMathJax() 
-    materialSwitch(
-      "area_formula", 
-      label = withMathJax('test \\(e^{i \\pi} + 1 = 0\\)'),
-      value = FALSE, 
-      inline=TRUE)
-    })
-  
-  output$testing2 = renderUI({
-    withMathJax() 
-    materialSwitch(
-      "area_formula", 
-      label = withMathJax('test \\(e^{i \\pi} + 1 = 0\\)'),
-      value = FALSE, 
-      inline=TRUE)
-    })
-  
   # Dragula Functions
   output$dragula <- renderDragula({
     dragula(c("Available", "Model"))
