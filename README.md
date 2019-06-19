@@ -15,4 +15,4 @@ runApp()
 
 ## Dependancies
 
-Requires [updated draculaR](/hazybluedot/draculaR) library.
+Requires [updated draculaR](https://github.com/hazybluedot/draculaR) library.
