@@ -3,8 +3,14 @@
 # April 2019
 #
 
-# Libraries ----
+# Libraries ---- 
 # source("https://install-github.me/zzawadz/dragulaR")  -  drag and drop library
+
+# This depends on a modified version of the dragulaR library,
+# until zzawadz accepts my pull request, and the updates make their way to CRAN,
+# install the latest version from github:
+# devtools::install_github("https://github.com/hazybluedot/dragulaR")
+
 library(shiny)
 library(knitr)
 #library(shinyWidgets)
@@ -20,7 +26,7 @@ makeElement <- function(data)
 	name <- names(data)[[1]]
 	div(style = "border-width:2px;border-style:solid;",
 		drag = name,
-		div(class = "active content", withMathJax(paste0('\\(', data, '\\)'))))
+		class = "active content", paste0('$$', data, '$$'))
 }
 
 
@@ -37,17 +43,6 @@ ui <- fluidPage(
                    column(12,
                           h3("Drag from here:"),
                           uiOutput("equationList")
-                          
-                          # TODO: Fix Persistance in Drag and Drop elements
-                          #    Should have to do with setting the copy variable true, 
-                          #    but that documentation is only for html
-                          #    https://sindu12jun.github.io/dragula/
-                          # ,
-                          # lapply(colnames(mtcars), makeElement, data = mtcars)
-                          # dragula([document.getElementById("Available")),
-                          # document.getElementById("Available")],{
-                          #   copy:true
-                          # }
                    ),
                    dragulaOutput("dragula"),
                    
@@ -55,7 +50,6 @@ ui <- fluidPage(
                    
                    h4("Solution and Feedback")
                  ),
-                 
                  
                  mainPanel(
                    fluidRow( 
@@ -101,7 +95,7 @@ server <- function(input, output) {
   
   # Dragula Functions
   output$dragula <- renderDragula({
-    dragula(c("Available", "Model"))
+    dragula(c("problemStatement", "Available", "Model"), copyOnly = 'Available', removeOnSpill = TRUE)
   })
   
   output$print <- renderText({
