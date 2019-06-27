@@ -1,5 +1,8 @@
 library(stringr)
 library(purrr)
+library(reticulate)
+
+sympy = import("sympy")
 
 extractSymbols <- function(eq) {
       symbols <- str_split(eq, "(\\s+|=)")
@@ -14,7 +17,8 @@ initializeWorkspace <- function() {
         name = character(),
         type = factor(levels = c("symbol", "expression")),
         sympy = character(),
-        parent = integer(),
+        show = integer(),
+        lock = logical(),
         stringsAsFactors = FALSE)
 }
 
@@ -25,7 +29,7 @@ tex_to_symbol <- function(tex) {
     str_replace_all("\\^", "\\*\\*")
 }
 
-sympyify <- function(eq) {
+sympyify_str <- function(eq) {
   message(paste0("sympifying '", eq, "'"))
   components <- str_split(eq, "\\s*=\\s*")
   lapply(components, function(li) {
@@ -42,6 +46,22 @@ sympyify <- function(eq) {
   })
 }
 
+sympify <- function(eq) {
+  components <- str_split(eq, "\\s*=\\s*")
+  lapply(components, function(li) {
+    if (length(li) > 2) {
+      stop('Invalid express')
+    }
+    li = map_chr(li, tex_to_symbol)
+    
+    if (length(li) == 2) {
+      sympy$Eq(sympy$sympify(li[1]), sympy$sympify(li[2]))
+    } else {
+      sympy$sympify(li[1])
+    }
+  })
+}
+
 refreshWorkspace <- function(workspace, items) {
     message("refreshWorkspace")
     
@@ -51,14 +71,15 @@ refreshWorkspace <- function(workspace, items) {
     newRows <- lapply(newItems, function(item) {
         eq <- workspace$equations[which(workspace$equations$name == item), "eq"]
         name <- workspace$equations[which(workspace$equations$name == item), "name"]
-        sympy <- sympyify(eq)[[1]]
+        sympy <- sympyify_str(eq)[[1]]
 
         newRow <- data.frame(id = id, 
                              eq = eq, 
                              name = paste(name, id, sep = "_"), 
                              type = "expression",
                              sympy = sympy,
-                             parent = NA, # TODO: probably unused if we make the id the same for express and symbols
+                             show = NA,
+                             lock = FALSE,
                              stringsAsFactors = FALSE)
         symbols <- extractSymbols(newRow$eq)
         newSymbols <- lapply(symbols, function(sym) {
@@ -69,7 +90,8 @@ refreshWorkspace <- function(workspace, items) {
                        name = paste(sym, id, sep = "_"),
                        type = "symbol",
                        sympy = tex_to_symbol(sym),
-                       parent = id,
+                       show = NA,
+                       lock = FALSE,
                        stringsAsFactors = FALSE)
         })
         print(newSymbols)
@@ -86,4 +108,38 @@ refreshWorkspace <- function(workspace, items) {
     workspace$model <- items
     #list(model = items,  workspace = workspace)
     workspace
+}
+
+workspaceSolve <- function(ws, subs) {
+  if (nrow(ws) <= 0) {
+    return(NA)
+  }
+  message("workspaceSolve")
+  print(subs)
+  lsubs <- split(subs, seq(nrow(subs)))
+  #print(lsubs)
+  ws %>%
+    filter(type == "expression") %>%
+    apply(1, function(row) {
+      message(paste0("solving ", row["eq"]))
+      
+      sym <- sympify(row[["eq"]])[[1]]
+      print(sym)
+      if (length(lsubs) <= 0) {
+        return(sym)
+      }
+      sym <- purrr::reduce(lsubs, function(a, s) {
+        message("row of subs")
+        print(s)
+        symbol <- s[,"symbol"]
+        value <- s[,"value"]
+        if (length(symbol) > 0 && str_length(symbol) > 0 && is.numeric(value)) {
+          return(a$subs(sympy$Symbol(symbol), s[,"value"]))
+        } else {
+          return(a)
+        }
+      }, .init = sym)
+      solution <- sympy$solve(sym)[[1]]
+      return(list(eq = row[["eq"]], sym = sym, solution = solution))
+    })
 }

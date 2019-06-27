@@ -11,7 +11,8 @@ label, label div {
     /*float:left;*/
     display:inline-block;
 }
-.form-group input {
+.form-group input,
+.container div {
     height: 30px;
     width: 100px;
     border: 1px solid #000;
