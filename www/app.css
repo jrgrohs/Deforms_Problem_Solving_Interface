@@ -11,8 +11,13 @@ label, label div {
     /*float:left;*/
     display:inline-block;
 }
-.form-group input,
-.container div {
+
+.container {
+    height: 40px;
+    float:none;
+}
+
+.form-group input {
     height: 30px;
     width: 100px;
     border: 1px solid #000;

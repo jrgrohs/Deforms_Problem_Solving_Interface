@@ -12,6 +12,7 @@
 # devtools::install_github("https://github.com/hazybluedot/dragulaR")
 
 library(shiny)
+library(tidyverse)
 library(knitr)
 #library(shinyWidgets)
 library(dragulaR)
