@@ -65,6 +65,7 @@ sympify <- function(eq) {
 refreshWorkspace <- function(workspace, items) {
     message("refreshWorkspace")
     
+    # get new workspace items, append a _ID onto them
     newItems <- items[! items %in% workspace$model]
     
     id <- nrow(workspace$data) + 1

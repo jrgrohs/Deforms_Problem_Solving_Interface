@@ -105,7 +105,7 @@ server <- function(input, output) {
   # })
   
   output$workspace <- renderPrint({
-    workspace$data
+    reactiveValuesToList(workspace)
   })
   
   observeEvent(selectedProblem, {
@@ -209,7 +209,7 @@ server <- function(input, output) {
                             lock = trimws(row[which(n == "lock")])
                             
                             if (type == "symbol") {
-                                if (is.null(obsList[[name]])) {
+                                if (FALSE && is.null(obsList[[name]])) {
                                     obsList[[name]] <<- observeEvent(input[[name]], {
                                         value = input[[name]]
                                         if (str_length(value) <= 0) {
