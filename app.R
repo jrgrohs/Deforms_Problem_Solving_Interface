@@ -177,7 +177,7 @@ server <- function(input, output) {
       
   })
   
-  output$Model <- renderUI({
+  output$ModelOld <- renderUI({
       if (nrow(workspace$data) == 0) {
           return("")
       }

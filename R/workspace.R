@@ -11,15 +11,19 @@ extractSymbols <- function(eq) {
 }
 
 initializeWorkspace <- function() {
-    data.frame(
-        id = integer(),
-        eq = character(),
-        name = character(),
-        type = factor(levels = c("symbol", "expression")),
-        sympy = character(),
-        show = integer(),
-        lock = logical(),
-        stringsAsFactors = FALSE)
+    # data.frame(
+    #     id = integer(),
+    #     eq = character(),
+    #     name = character(),
+    #     type = factor(levels = c("symbol", "expression")),
+    #     sympy = character(),
+    #     show = integer(),
+    #     lock = logical(),
+    #     stringsAsFactors = FALSE)
+  data.frame(
+    eqname = character(),
+    eqnum = integer(),
+    stringsAsFactors = FALSE)
 }
 
 tex_to_symbol <- function(tex) {
@@ -63,6 +67,36 @@ sympify <- function(eq) {
 }
 
 refreshWorkspace <- function(workspace, items) {
+  workspace$data %>% 
+    group_by(eqname) %>% 
+    summarize(n = n()) ->
+    existing_equations
+  
+  message("existing equations")
+  print(existing_equations)
+  
+  newItems <- items[! items %in% workspace$data$eqname]
+  newRows <- lapply(newItems, function(item) {
+    eqno <- (existing_equations[existing_equations$eqname == item,]$n)[1]
+    if (is.na(eqno)) {
+      eqno = 1
+    } else {
+      eqno = eqno + 1
+    }
+    newRow <- data.frame(eqname = item,
+                         eqnum  = eqno)
+    newRow
+  })
+  
+  workspace$data <- rbind(workspace$data, newRows)
+  message("New rows")
+  print(newRows)
+  message("New workspace data")
+  print(workspace$data)
+  workspace
+}
+
+oldRefreshWorkspace <- function(workspace, items) {
     message("refreshWorkspace")
     
     # get new workspace items, append a _ID onto them
