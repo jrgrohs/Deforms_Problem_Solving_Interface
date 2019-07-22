@@ -2,6 +2,8 @@ library(stringr)
 library(purrr)
 library(reticulate)
 
+reticulate::use_python("/usr/bin/python")
+
 sympy = import("sympy")
 
 extractSymbols <- function(eq) {
@@ -67,7 +69,12 @@ sympify <- function(eq) {
 }
 
 refreshWorkspace <- function(workspace, items) {
-  workspace$data %>% 
+
+  if (length(items) <= 0) {
+    return(workspace)
+  }
+  
+workspace$data %>% 
     group_by(eqname) %>% 
     summarize(n = n()) ->
     existing_equations
@@ -75,24 +82,41 @@ refreshWorkspace <- function(workspace, items) {
   message("existing equations")
   print(existing_equations)
   
+  message("dragulaR items")
+  as.data.frame(table(items), stringsAsFactors = FALSE) %>% 
+    #rename(eqname = `.`) %>% str()
+    full_join(existing_equations, by = c(items = "eqname")) %>%
+    mutate(new = if_else(!is.na(n), Freq - n, 1L)) ->
+    newItems
+  message("result of Full Join:")
+  str(newItems)
+  #print(newItems)
+  
   newItems <- items[! items %in% workspace$data$eqname]
   newRows <- lapply(newItems, function(item) {
-    eqno <- (existing_equations[existing_equations$eqname == item,]$n)[1]
+    eqno <- first(existing_equations[existing_equations$eqname == item,]$n)
+    message("eqno is")
+    print(eqno)
     if (is.na(eqno)) {
       eqno = 1
     } else {
       eqno = eqno + 1
     }
     newRow <- data.frame(eqname = item,
-                         eqnum  = eqno)
+                         eqnum  = eqno,
+                         stringsAsFactors = FALSE)
     newRow
   })
   
-  workspace$data <- rbind(workspace$data, newRows)
-  message("New rows")
-  print(newRows)
-  message("New workspace data")
-  print(workspace$data)
+  if (length(newRows) > 0) {
+    message("New rows")
+    str(newRows)
+    message("Exsiting data")
+    str(workspace$data)
+    workspace$data <- do.call(rbind, c(workspace$data, newRows))
+    message("New workspace data")
+    str(workspace$data)
+  }
   workspace
 }
 

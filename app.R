@@ -17,7 +17,7 @@ library(knitr)
 #library(shinyWidgets)
 library(dragulaR)
 
-source("R/debounce.R")
+#source("R/debounce.R")
 source("R/workspace.R")
 
 # Define Variables 
