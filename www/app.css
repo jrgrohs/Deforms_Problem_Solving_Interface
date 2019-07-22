@@ -1,0 +1,31 @@
+label, label div {
+    font-family: Georgia, "Times New Roman", Times, serif;
+    font-size: 18px;
+    color: #333;
+    height: 30px;
+    width: 50px;
+    margin-top: 0px;
+    margin-left: 10px;
+    text-align: right;
+    margin-right:15px;
+    /*float:left;*/
+    display:inline-block;
+}
+
+.container {
+    height: 40px;
+    float:none;
+}
+
+.form-group input {
+    height: 30px;
+    width: 100px;
+    border: 1px solid #000;
+    margin-top: 10px;
+    float:right;
+}
+
+.multiline {
+    border: 2px solid #AAA;
+    float:none;
+}
