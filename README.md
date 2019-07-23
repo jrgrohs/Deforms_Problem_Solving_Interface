@@ -16,3 +16,7 @@ runApp()
 ## Dependancies
 
 Requires [updated dragulaR](https://github.com/hazybluedot/dragulaR) library.
+
+```{r}
+devtools::install_github("hazybluedot/dragulaR")
+```
