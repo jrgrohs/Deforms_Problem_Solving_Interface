@@ -8,7 +8,7 @@ expected_parameters:
  - T_ref
  - \alpha
  - L
- - gap
+ - delta_t
 ---
 
 A solid square bar of cross-sectional dimensions  $50mm$ x $50mm$ is attached rigidly to the wall at point A and has a gap of $1 mm$  from the rigid wall at point B at $25^\circ C$.  
@@ -17,8 +17,8 @@ A solid square bar of cross-sectional dimensions  $50mm$ x $50mm$ is attached ri
 
 Knowing the bar is made of aluminum $E = 70 GPa$, $\alpha = 23 * 10^{-6}$ :
 
-1.  At what temperature does the gap close? 
-2.  What stress exists in the bar at a temperature of $100^\\circ C$?'
+1. At what temperature does the gap close? 
+2. What stress exists in the bar at a temperature of $100^\\circ C$?'
 3. Do something else!
     
     

@@ -19,6 +19,7 @@ library(dragulaR)
 
 #source("R/debounce.R")
 source("R/workspace.R")
+source("R/workspaceUI.R")
 
 # Define Variables 
 var_list <- c("Unknown","50 mm","50 mm","1 mm","70 GPa","23 x 10-6 oC-1","100 oC")
@@ -52,7 +53,6 @@ ui <- fluidPage(theme = "bootstrap.min.css",
                           h3("Drag from here:"),
                           uiOutput("equationList")
                    ),
-                   dragulaOutput("dragula"),
                    
                    hr(),
                    
@@ -72,26 +72,28 @@ ui <- fluidPage(theme = "bootstrap.min.css",
                    br(),
                    
                    fluidRow(
-                     column(12,
-                            h3("Work Space"),
-                            column(12,
-                                   h3("Drop here:"),
-                                   #div(id = "Model", style = "min-height: 600px;"),
-                                   uiOutput("Model", style = "min-height: 200px;")
-                            )
-                     )
-                   ),
-                   fluidRow(
-                       verbatimTextOutput("solution"),
-                       verbatimTextOutput("workspace")
-                   )
+                       column(12,
+                              workspaceUI("main", "Main Work Space")#,
+                              #workspaceUI("side", "Side workspace")
+                       )
+                       
+                   )#,
+                   #actionButton("solve", "Solve"),
+                   #fluidRow(
+                #       verbatimTextOutput("solution"),
+                       #h4("Debug Info"),
+                       #verbatimTextOutput("debug"),
+                       #h5("workspace"),
+                       #verbatimTextOutput("workspace_dump")
+                   #)
                  )
-  )
+  ),
+  dragulaOutput("dragula")
 )
 
 # Define Server Function
 
-server <- function(input, output) {
+server <- function(input, output, session) {
   selectedProblem <- file.path('problems', 'problem1.md')
   workspace = reactiveValues(data = initializeWorkspace(), 
                              model = c(), equations = c(),
@@ -99,6 +101,7 @@ server <- function(input, output) {
   #subs = reactiveValues()
   
   obsList <- list()
+  workspaces <- list()
 
   # output$items <- renderPrint({
   #     dragulaValue(input$dragula)
@@ -116,9 +119,10 @@ server <- function(input, output) {
       workspace$equations <- do.call(rbind, rows)
   })
   
-  observeEvent(input$dragula, {
-      workspace <- refreshWorkspace(workspace, dragulaValue(input$dragula)$Model)
-  })
+  workspaces[["main"]] <- callModule(module = workspaceModule, id = "main", 
+                                     drop = reactive(workspaceValue(input$dragula, "main")),
+                                     equationBank = workspace$equations)
+  #side_workspaces <- callModule(module = workspaceModule, id = "side", drop = reactive(workspaceValue(input$dragula, "side")))
   
   output$solution <- eventReactive(workspace$subs, {
       message("subs changed")
@@ -171,10 +175,6 @@ server <- function(input, output) {
   
   output$problemStatement <- renderUI({
     HTML(markdown::markdownToHTML(knit(selectedProblem, quiet = TRUE)))
-  })
-  
-  observeEvent(workspace$data, {
-      
   })
   
   output$ModelOld <- renderUI({
@@ -272,9 +272,10 @@ server <- function(input, output) {
   
   # Dragula Functions
   output$dragula <- renderDragula({
-    dragula(c("Available", "Model"), copyOnly = 'Available', removeOnSpill = TRUE)
+    dragula(c("Available", "main-workspace"), copyOnly = 'Available', removeOnSpill = TRUE)
   })
   
+  output$debug <- renderPrint(input$dragula)
   output$print <- renderText({
     state <- dragulaValue(input$dragula)
     sprintf("Available:\n  %s\n\nModel:\n  %s",
@@ -283,6 +284,13 @@ server <- function(input, output) {
     
   })
   
+  observeEvent(input$solve, {
+      message("main app solve it!")
+      session$sendCustomMessage(type = 'testmessage',
+                                message = 'Thank you for clicking')
+  })
+  
+  output$workspace_dump <- renderPrint(reactiveValuesToList(workspace))
 }
 
 # Run the application

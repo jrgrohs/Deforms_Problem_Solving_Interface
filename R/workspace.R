@@ -6,10 +6,15 @@ reticulate::use_python("/usr/bin/python")
 
 sympy = import("sympy")
 
+# extract dragula values for workspace module with id==workspace
+workspaceValue <- function(x, workspace) {
+  unlist(x[[paste0(workspace, "-workspace")]])
+}
+
 extractSymbols <- function(eq) {
       symbols <- str_split(eq, "(\\s+|=)")
       symbols <- symbols[symbols != "="]
-      lapply(symbols, function(s) { s = s[s != ""] }) # remove empty symbols
+      first(lapply(symbols, function(s) { s = s[s != ""] })) # remove empty symbols
 }
 
 initializeWorkspace <- function() {
@@ -25,6 +30,7 @@ initializeWorkspace <- function() {
   data.frame(
     eqname = character(),
     eqnum = integer(),
+    status = factor(c(), c("new", "remove", "reorder")),
     stringsAsFactors = FALSE)
 }
 
@@ -33,6 +39,21 @@ tex_to_symbol <- function(tex) {
     str_remove_all("[\\{\\}\\\\]") %>%
     str_replace_all("e\\^([-]?[.]?[0-9]+[.]?[0-9]*)", "exp(\\1)") %>% # e^x => exp(x)
     str_replace_all("\\^", "\\*\\*")
+}
+
+# TODO: rename, rewrite description
+# Take a numbered, namespaced symbol such as 'main-L_1' and 
+# return the generic symbol, in this example 'L'
+symbol_to_generic <- function(x) {
+  lapply(str_split(x, '-'), 
+                function(x) {
+                  symbol <- tail(x, 1)
+                  ns <- head(x,1)
+                  parts <- str_split(symbol, '_')[[1]]
+                  base <- paste(head(parts, -1), collapse = '_')
+                  eqnum <- tail(parts, 1)
+                  data.frame(symbol = symbol, ns = ns, base = base, eqnum = eqnum, stringsAsFactors = FALSE)
+  })
 }
 
 sympyify_str <- function(eq) {
@@ -52,13 +73,17 @@ sympyify_str <- function(eq) {
   })
 }
 
-sympify <- function(eq) {
+sympify <- function(eq, subs) {
   components <- str_split(eq, "\\s*=\\s*")
   lapply(components, function(li) {
     if (length(li) > 2) {
       stop('Invalid express')
     }
-    li = map_chr(li, tex_to_symbol)
+    li = vapply(map_chr(li, tex_to_symbol), function(exp) {
+      purrr::reduce(subs, function(eq, sym) {
+        first(str_replace(eq, sym$base, paste(sym$base, sym$eqnum, sep = "_")))
+      }, .init = exp) 
+    }, FUN.VALUE = "")
     
     if (length(li) == 2) {
       sympy$Eq(sympy$sympify(li[1]), sympy$sympify(li[2]))
@@ -68,136 +93,81 @@ sympify <- function(eq) {
   })
 }
 
-refreshWorkspace <- function(workspace, items) {
+appendToWorkspace <- function(workspace, item) {
+  eqnum <- nrow(workspace %>% filter(eqname == item)) + 1
+  workspace <- bind_rows(workspace, 
+                              data.frame(eqname = item, 
+                                         eqnum = eqnum, 
+                                         status = "new",
+                                         stringsAsFactors = FALSE))
+  # message("appendToWorkspace result of bind_rows")
+  # str(workspace)
+  workspace
+}
 
+# TODO: handle removal and reordering
+refreshWorkspace <- function(workspace, items) {
+  stopifnot("data.frame" %in% class(workspace))
   if (length(items) <= 0) {
     return(workspace)
   }
   
-workspace$data %>% 
+workspace %>% 
     group_by(eqname) %>% 
     summarize(n = n()) ->
     existing_equations
   
-  message("existing equations")
-  print(existing_equations)
-  
-  message("dragulaR items")
   as.data.frame(table(items), stringsAsFactors = FALSE) %>% 
-    #rename(eqname = `.`) %>% str()
     full_join(existing_equations, by = c(items = "eqname")) %>%
-    mutate(new = if_else(!is.na(n), Freq - n, 1L)) ->
-    newItems
-  message("result of Full Join:")
-  str(newItems)
-  #print(newItems)
-  
-  newItems <- items[! items %in% workspace$data$eqname]
-  newRows <- lapply(newItems, function(item) {
-    eqno <- first(existing_equations[existing_equations$eqname == item,]$n)
-    message("eqno is")
-    print(eqno)
-    if (is.na(eqno)) {
-      eqno = 1
-    } else {
-      eqno = eqno + 1
-    }
-    newRow <- data.frame(eqname = item,
-                         eqnum  = eqno,
-                         stringsAsFactors = FALSE)
-    newRow
-  })
-  
-  if (length(newRows) > 0) {
-    message("New rows")
-    str(newRows)
-    message("Exsiting data")
-    str(workspace$data)
-    workspace$data <- do.call(rbind, c(workspace$data, newRows))
-    message("New workspace data")
-    str(workspace$data)
+    mutate(new = if_else(!is.na(n), Freq - n, 1L)) %>%
+    filter(new >= 1) ->
+    newItemsdf
+
+  if (nrow(newItemsdf) <= 0) {
+    return(workspace)
   }
+  
+  expandedNewItems <- apply(newItemsdf, 1, function(row) { rep(row[1], row[4])})
+
+  workspace <- purrr::reduce(expandedNewItems, appendToWorkspace, .init = workspace)
   workspace
-}
-
-oldRefreshWorkspace <- function(workspace, items) {
-    message("refreshWorkspace")
-    
-    # get new workspace items, append a _ID onto them
-    newItems <- items[! items %in% workspace$model]
-    
-    id <- nrow(workspace$data) + 1
-    newRows <- lapply(newItems, function(item) {
-        eq <- workspace$equations[which(workspace$equations$name == item), "eq"]
-        name <- workspace$equations[which(workspace$equations$name == item), "name"]
-        sympy <- sympyify_str(eq)[[1]]
-
-        newRow <- data.frame(id = id, 
-                             eq = eq, 
-                             name = paste(name, id, sep = "_"), 
-                             type = "expression",
-                             sympy = sympy,
-                             show = NA,
-                             lock = FALSE,
-                             stringsAsFactors = FALSE)
-        symbols <- extractSymbols(newRow$eq)
-        newSymbols <- lapply(symbols, function(sym) {
-          message("sym:")
-          print(sym)
-            data.frame(id = id,
-                       eq = sym,
-                       name = paste(sym, id, sep = "_"),
-                       type = "symbol",
-                       sympy = tex_to_symbol(sym),
-                       show = NA,
-                       lock = FALSE,
-                       stringsAsFactors = FALSE)
-        })
-        print(newSymbols)
-        id <- id + 1
-        rbind(do.call(rbind, newSymbols), newRow)
-    })
-    #message(paste0("binding ", length(newRows), " new rows:" ))
-    #print(newRows)
-    
-    if (length(newRows) > 0) {
-        newworkspace <- do.call(rbind, newRows)
-        workspace$data <- rbind(workspace$data, newworkspace)
-    }
-    workspace$model <- items
-    #list(model = items,  workspace = workspace)
-    workspace
 }
 
 workspaceSolve <- function(ws, subs) {
   if (nrow(ws) <= 0) {
     return(NA)
   }
+  
+  lsubs <- subs[sapply(subs, function(x) !is.na(x[,"value"]) && is.numeric(x[,"value"]))]
   message("workspaceSolve")
-  print(subs)
-  lsubs <- split(subs, seq(nrow(subs)))
+  #print(lsubs)
+  #lsubs <- split(subs, seq(nrow(subs)))
   #print(lsubs)
   ws %>%
-    filter(type == "expression") %>%
+    #filter(type == "expression ") %>%
     apply(1, function(row) {
       message(paste0("solving ", row["eq"]))
       
-      sym <- sympify(row[["eq"]])[[1]]
+      sym <- sympify(row[["eq"]], subs)[[1]]
       print(sym)
       if (length(lsubs) <= 0) {
         return(sym)
       }
       sym <- purrr::reduce(lsubs, function(a, s) {
-        message("row of subs")
-        print(s)
+        #message("row of subs")
+        #print(s)
         symbol <- s[,"symbol"]
         value <- s[,"value"]
-        if (length(symbol) > 0 && str_length(symbol) > 0 && is.numeric(value)) {
-          return(a$subs(sympy$Symbol(symbol), s[,"value"]))
+        if (length(symbol) > 0 && str_length(symbol) > 0) {
+          res <- a$subs(sympy$Symbol(symbol), s[,"value"])
         } else {
-          return(a)
+          res <- a
         }
+        #message("result")
+        #print(res)
+        return(res)
       }, .init = sym)
+      message(paste0("sym for solver: ", sym))
       solution <- sympy$solve(sym)[[1]]
       return(list(eq = row[["eq"]], sym = sym, solution = solution))
     })
