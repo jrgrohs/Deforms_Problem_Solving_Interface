@@ -138,11 +138,9 @@ workspaceSolve <- function(ws, subs) {
     return(NA)
   }
   
+  # gather rows of subs that are not NA and are numeric
   lsubs <- subs[sapply(subs, function(x) !is.na(x[,"value"]) && is.numeric(x[,"value"]))]
-  message("workspaceSolve")
-  #print(lsubs)
-  #lsubs <- split(subs, seq(nrow(subs)))
-  #print(lsubs)
+  
   ws %>%
     #filter(type == "expression ") %>%
     apply(1, function(row) {
@@ -150,12 +148,14 @@ workspaceSolve <- function(ws, subs) {
       
       sym <- sympify(row[["eq"]], subs)[[1]]
       print(sym)
+
       if (length(lsubs) <= 0) {
+        # without any substitutions to apply, simply return the sympify object
         return(sym)
       }
+
+      # with substitutions, apply each subsitution to the sympify object, accumulating the result
       sym <- purrr::reduce(lsubs, function(a, s) {
-        #message("row of subs")
-        #print(s)
         symbol <- s[,"symbol"]
         value <- s[,"value"]
         if (length(symbol) > 0 && str_length(symbol) > 0) {
@@ -163,8 +163,6 @@ workspaceSolve <- function(ws, subs) {
         } else {
           res <- a
         }
-        #message("result")
-        #print(res)
         return(res)
       }, .init = sym)
       message(paste0("sym for solver: ", sym))
