@@ -16,10 +16,9 @@ symbol_server <- function(input, output, session, value) {
     
     observeEvent(value, {
         #v <- value
-        message(paste0("calculated value has changed to ", value))
-        str(value)
+        message(paste0(session$ns(""), ": calculated value has changed to ", value))
         if (!is.na(value) && is.numeric(value)) {
-            updateTextInput(session, "value", value = value())
+            updateTextInput(session, "value", value = value)
         }
     })
     

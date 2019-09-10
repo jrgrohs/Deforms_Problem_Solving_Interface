@@ -73,6 +73,7 @@ sympyify_str <- function(eq) {
   })
 }
 
+# Take a equation string and turn it into a sympy symbolic Eq object.
 sympify <- function(eq, subs) {
   components <- str_split(eq, "\\s*=\\s*")
   lapply(components, function(li) {
